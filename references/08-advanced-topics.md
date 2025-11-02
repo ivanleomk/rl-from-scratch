@@ -1,4 +1,3 @@
-# Topic 8: Advanced Topics & Research Directions
 
 ## Overview
 

@@ -1,4 +1,3 @@
-# Tutorial 3: Building a CartPole Environment Wrapper
 
 Welcome to the third tutorial in our Reinforcement Learning (RL) curriculum! In this hands-on guide, you will learn how to create a custom wrapper for a standard RL environment from the [Gymnasium](https://gymnasium.farama.org/) library. Building wrappers is a fundamental skill for any RL practitioner, as it allows you to modify and extend existing environments to suit your specific research or application needs.
 

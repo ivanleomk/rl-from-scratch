@@ -1,4 +1,3 @@
-# Topic 5: Q-Learning & Off-Policy Methods
 
 ## Overview
 

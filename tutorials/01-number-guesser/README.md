@@ -1,4 +1,3 @@
-# Tutorial 1: Number Guesser & Binary Rewards
 
 ## High-Level Overview
 

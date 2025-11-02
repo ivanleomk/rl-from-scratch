@@ -1,4 +1,3 @@
-# Topic 6: Continuous Control & DDPG/TD3/SAC
 
 ## Overview
 

@@ -1,4 +1,3 @@
-# Topic 2: REINFORCE (Vanilla Policy Gradient)
 
 ## Overview
 

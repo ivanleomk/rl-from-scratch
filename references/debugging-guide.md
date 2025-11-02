@@ -1,4 +1,3 @@
-# RL Debugging Guide
 
 ## The Golden Rule of RL Debugging
 

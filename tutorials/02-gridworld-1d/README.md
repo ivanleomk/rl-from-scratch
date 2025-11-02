@@ -1,4 +1,3 @@
-# Tutorial 2: 1D GridWorld with Sparse Rewards
 
 Welcome to the second tutorial in our Reinforcement Learning (RL) curriculum. In this tutorial, you will learn about a classic problem in RL: sparse rewards and the credit assignment problem. We will build a custom 1D GridWorld environment using Gymnasium, train an agent to navigate it, and visualize the learned policy.
 

@@ -1,4 +1,3 @@
-# Topic 3: Value Functions & Actor-Critic Methods
 
 ## Overview
 

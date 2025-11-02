@@ -1,4 +1,3 @@
-# Topic 1: Foundations - Toy Environments & Core Concepts
 
 ## Overview
 

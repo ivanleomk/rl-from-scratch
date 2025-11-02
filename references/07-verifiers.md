@@ -1,4 +1,3 @@
-# Topic 7: Modern Context - LLMs & Verifiers
 
 ## Overview
 

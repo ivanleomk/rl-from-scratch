@@ -1,4 +1,3 @@
-# Topic 4: Trust Regions & PPO
 
 ## Overview
 
