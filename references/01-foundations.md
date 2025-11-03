@@ -372,3 +372,172 @@ Let's break down these results:
 - **Optimal Policy `π*(s)`**: This grid shows the best action to take in each state. The arrows guide the agent towards the goal while avoiding the wall and the danger zone. For example, from state (2,0), the best action is 'Up'. Notice the policy for the state (1,2) is to go 'Up', even though it's next to the danger zone. This is because the stochastic nature of the environment makes moving right too risky—a slip could be catastrophic.
 
 This from-scratch implementation provides a clear, practical understanding of how an agent can find the optimal way to act in a known environment.
+
+
+## From Theory to Practice: A Complete Q-Learning Agent for CartPole
+
+While understanding the theory is essential, the best way to solidify these concepts is to build a complete, learning agent from scratch. In this section, we will move from model-based dynamic programming to a **model-free** algorithm called **Q-Learning**. This means our agent will learn directly from experience, without needing to know the environment's transition probabilities.
+
+We will tackle the classic `CartPole-v1` environment from Gymnasium. The goal is to balance a pole on a cart that can move left or right. A reward of +1 is given for every timestep the pole remains upright.
+
+### The Challenge: Continuous State Spaces
+
+The CartPole environment has a continuous state space, meaning its state is described by four floating-point numbers: cart position, cart velocity, pole angle, and pole angular velocity. Our Q-table approach, however, requires a discrete number of states. To solve this, we must **discretize** the state space by binning the continuous values into a manageable number of categories. This is a common and practical technique when applying tabular methods to continuous problems.
+
+### The Q-Learning Algorithm
+
+Q-Learning is an off-policy temporal-difference (TD) control algorithm. Its goal is to find the optimal action-value function, `Q*(s, a)`, by iteratively updating a Q-table. The core of the algorithm is its update rule, which is derived from the Bellman equation:
+
+`Q(s, a) <- Q(s, a) + α * [R + γ * max_a'(Q(s', a')) - Q(s, a)]`
+
+Where:
+- `α` (alpha) is the learning rate, which determines how much we update our Q-values.
+- `γ` (gamma) is the discount factor.
+
+### Full Python Implementation for a Q-Learning Agent
+
+Here is the complete, commented code for a Q-Learning agent that learns to solve CartPole. It includes the agent class, the state discretization logic, the training loop, and code to plot the results.
+
+```python
+import gymnasium as gym
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+
+class QLearningCartPoleAgent:
+    def __init__(self, env, learning_rate=0.1, discount_factor=0.99, epsilon_start=1.0, epsilon_end=0.05, epsilon_decay_rate=0.9995):
+        self.env = env
+        self.lr = learning_rate
+        self.gamma = discount_factor
+        self.epsilon = epsilon_start
+        self.epsilon_end = epsilon_end
+        self.epsilon_decay_rate = epsilon_decay_rate
+
+        # Discretize the continuous state space
+        self.num_bins = (6, 6, 6, 6)  # Bins for position, velocity, angle, angular velocity
+        self.state_bins = [
+            np.linspace(-2.4, 2.4, self.num_bins[0]),
+            np.linspace(-4, 4, self.num_bins[1]),
+            np.linspace(-0.2095, 0.2095, self.num_bins[2]), # ~12 degrees
+            np.linspace(-4, 4, self.num_bins[3])
+        ]
+
+        # Initialize Q-table with zeros
+        self.q_table = np.zeros(self.num_bins + (env.action_space.n,))
+
+    def discretize_state(self, state):
+        """Converts a continuous state to a discrete state index."""
+        discrete_state = []
+        for i, value in enumerate(state):
+            discrete_state.append(np.digitize(value, self.state_bins[i]) - 1)
+        return tuple(discrete_state)
+
+    def choose_action(self, state):
+        """Chooses an action using an epsilon-greedy policy."""
+        if np.random.random() < self.epsilon:
+            return self.env.action_space.sample()  # Explore
+        else:
+            discrete_state = self.discretize_state(state)
+            return np.argmax(self.q_table[discrete_state]) # Exploit
+
+    def update_q_table(self, state, action, reward, next_state, terminated):
+        """Updates the Q-value for a given state-action pair."""
+        discrete_state = self.discretize_state(state)
+        discrete_next_state = self.discretize_state(next_state)
+
+        if terminated:
+            target = reward
+        else:
+            target = reward + self.gamma * np.max(self.q_table[discrete_next_state])
+
+        # Q-learning update rule
+        old_value = self.q_table[discrete_state + (action,)]
+        new_value = old_value + self.lr * (target - old_value)
+        self.q_table[discrete_state + (action,)] = new_value
+
+    def decay_epsilon(self):
+        """Decays the exploration rate."""
+        self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay_rate)
+
+def train_agent(episodes=20000):
+    env = gym.make("CartPole-v1")
+    agent = QLearningCartPoleAgent(env)
+    rewards_per_episode = []
+
+    for episode in range(episodes):
+        state, _ = env.reset()
+        total_reward = 0
+        terminated = False
+
+        while not terminated:
+            action = agent.choose_action(state)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            
+            # Adjust reward to encourage longer episodes
+            if not terminated:
+                reward = 1.0
+            else:
+                reward = -10.0 # Penalize failure
+
+            agent.update_q_table(state, action, reward, next_state, terminated)
+            state = next_state
+            total_reward += 1 # We are counting steps, so reward is 1 per step
+
+            if terminated or truncated:
+                break
+        
+        agent.decay_epsilon()
+        rewards_per_episode.append(total_reward)
+
+        if (episode + 1) % 1000 == 0:
+            avg_reward = np.mean(rewards_per_episode[-1000:])
+            print(f"Episode {episode + 1}/{episodes} | Avg Reward (last 1000): {avg_reward:.2f} | Epsilon: {agent.epsilon:.4f}")
+
+    env.close()
+    return rewards_per_episode
+
+def plot_rewards(rewards):
+    plt.figure(figsize=(12, 6))
+    plt.plot(rewards, label='Reward per Episode')
+    
+    # Calculate and plot rolling average
+    rolling_avg = np.convolve(rewards, np.ones(100)/100, mode='valid')
+    plt.plot(np.arange(99, len(rewards)), rolling_avg, label='100-Episode Rolling Average', color='red')
+    
+    plt.title("Q-Learning Agent Performance on CartPole-v1", fontsize=16, fontweight='bold')
+    plt.xlabel("Episode", fontsize=12)
+    plt.ylabel("Total Reward (Steps)", fontsize=12)
+    plt.legend()
+    plt.grid(True)
+    plt.savefig("/home/ubuntu/rl-from-scratch/references/images/q_learning_cartpole_performance.png", dpi=300)
+    print("\nPlot saved to /home/ubuntu/rl-from-scratch/references/images/q_learning_cartpole_performance.png")
+
+if __name__ == "__main__":
+    print("--- Training Q-Learning Agent for CartPole-v1 ---")
+    rewards = train_agent()
+    plot_rewards(rewards)
+```
+
+### Training and Results
+
+After running the training script for 20,000 episodes, we can observe the agent's learning progress. The output shows the average reward over the last 1000 episodes, which steadily increases as the agent learns a better policy. The exploration rate (epsilon) also decays over time, shifting the agent from exploration to exploitation.
+
+```
+--- Training Q-Learning Agent for CartPole-v1 ---
+Episode 1000/20000 | Avg Reward (last 1000): 29.02 | Epsilon: 0.6065
+Episode 2000/20000 | Avg Reward (last 1000): 54.45 | Epsilon: 0.3678
+Episode 3000/20000 | Avg Reward (last 1000): 93.04 | Epsilon: 0.2230
+Episode 4000/20000 | Avg Reward (last 1000): 129.24 | Epsilon: 0.1353
+Episode 5000/20000 | Avg Reward (last 1000): 219.04 | Epsilon: 0.0820
+Episode 6000/20000 | Avg Reward (last 1000): 305.89 | Epsilon: 0.0500
+...
+Episode 20000/20000 | Avg Reward (last 1000): 267.78 | Epsilon: 0.0500
+```
+
+The learning process is clearly visible in the performance plot:
+
+![Q-Learning Performance on CartPole-v1](https://raw.githubusercontent.com/ivanleomk/rl-from-scratch/main/references/images/q_learning_cartpole_performance.png)
+
+*Figure 6: The total reward (number of steps the pole was balanced) per episode. The red line shows the 100-episode rolling average, which clearly trends upward, indicating successful learning.*
+
+This complete example demonstrates how the foundational concepts of RL come together to create an agent that can learn a complex task through trial and error. We have moved from the abstract theory of MDPs and Bellman equations to a practical, working implementation of a model-free learning algorithm.
