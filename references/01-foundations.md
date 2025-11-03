@@ -1,122 +1,142 @@
+# Chapter 1: The Foundations of Reinforcement Learning
 
-## Overview
+Welcome to the foundational chapter of our journey into Reinforcement Learning (RL). Before we dive into writing complex algorithms, it is crucial to build a strong intuition for the core concepts that underpin the field. Inspired by the practical, code-first approach of [fast.ai](https://www.fast.ai/), we will start with tangible examples and interactive code, building our understanding of the theory from the ground up.
 
-Before implementing any RL algorithms, you need to deeply understand what an RL environment is and how the agent-environment interaction loop works. The best way to learn this is by building your own environments from scratch.
+## The Core Idea: Learning from Interaction
 
-## Key Concepts
+At its heart, Reinforcement Learning is about learning to make good decisions through trial and error. Imagine a baby learning to walk. It tries different movements (actions), sometimes it falls (negative reward), and sometimes it manages to take a step forward (positive reward). Over time, it learns to associate certain actions with positive outcomes and refines its strategy to walk more effectively. This is the essence of RL.
 
-### The RL Loop
+This interaction occurs in a feedback loop between two main components: the **agent** and the **environment**.
 
-At every timestep:
-1. Agent observes **state** `s_t`
-2. Agent takes **action** `a_t`
-3. Environment returns **reward** `r_t` and new **state** `s_{t+1}`
-4. Episode ends when **done** = True
+*   The **Agent** is the learner or decision-maker. It is the part of the system we are training, like the baby learning to walk or a computer program learning to play a game.
+*   The **Environment** is the world the agent interacts with. It comprises everything outside the agent.
 
-### State Space
+At each step, the agent observes the current state of the environment, takes an action, and receives a reward and the next state from the environment. This continuous cycle is known as the **agent-environment loop** [1].
 
-The **state** is all the information the agent needs to make a decision. In a grid world, this might be the agent's position. In a game, it might be the pixel values of the screen.
+![Agent-Environment Loop](./images/agent_environment_loop.png)
 
-**Key Question**: What information does the agent actually need? Too much information makes learning harder. Too little makes the task impossible.
+*Figure 1: The agent-environment interaction loop. The agent takes an action, and the environment responds with a new state and a reward.* 
 
-### Action Space
+## The Multi-Armed Bandit: A First Taste of the Exploration-Exploitation Dilemma
 
-**Discrete Actions**: A finite set of choices (e.g., {Left, Right, Up, Down})
+Before we tackle the full complexity of sequential decision-making, let's consider a simpler problem: the **multi-armed bandit**. Imagine you are in a casino facing a row of slot machines (one-armed bandits). Each machine has a different, unknown probability of paying out a reward. Your goal is to maximize your total winnings over a series of pulls.
 
-**Continuous Actions**: Real-valued vectors (e.g., steering angle and throttle in a car)
+This scenario introduces a fundamental challenge in RL: the **exploration-exploitation tradeoff** [2].
 
-Start with discrete actions - they're simpler to implement and debug.
+*   **Exploitation**: You could stick with the machine that has given you the best rewards so far. This is a safe bet, but you might be missing out on an even better machine.
+*   **Exploration**: You could try a machine you haven't played much. This is risky, as it might have a low payout, but it's the only way to discover the truly best machine.
 
-### Reward Design
+Finding the right balance is key. A common strategy is the **ε-greedy (epsilon-greedy)** approach, where with a small probability ε, you explore a random machine, and with probability 1-ε, you exploit the one you currently believe is best.
 
-This is the hardest part of RL. The reward function defines what "success" means.
+![Bandit Exploration Strategies](./images/bandit_exploration.png)
 
-**Binary Rewards**: `{0, 1}` - Either you succeeded or you didn't. Simple and unambiguous.
+*Figure 2: (Left) The agent's estimated rewards for each bandit arm compared to the true, unknown rewards. (Right) A comparison of cumulative regret for different exploration strategies. More effective exploration (like UCB) leads to lower regret over time.* 
 
-**Sparse Rewards**: Reward only comes at the end of an episode (e.g., +1 for winning a game). Hard to learn from because of the credit assignment problem.
+## Formalizing the Problem: Markov Decision Processes (MDPs)
 
-**Dense Rewards**: Reward at every step (e.g., +1 for moving closer to the goal). Easier to learn from, but can lead to reward hacking.
+To move beyond single-step problems like the multi-armed bandit, we need a mathematical framework for sequential decision-making under uncertainty. This is the **Markov Decision Process (MDP)** [3]. An MDP is defined by five key components:
 
-**Shaped Rewards**: Carefully designed rewards that guide the agent toward the goal. Powerful but requires domain knowledge.
+1.  **States (S)**: A set of all possible situations the agent can be in. For example, the position of a robot in a maze.
+2.  **Actions (A)**: A set of all possible choices the agent can make.
+3.  **Transition Model (T or P)**: The rules of the environment. It defines the probability of transitioning to a new state `s'` after taking an action `a` in state `s`. This is written as `P(s' | s, a)`.
+4.  **Reward Function (R)**: A function that defines the reward the agent receives for transitioning from state `s` to `s'` after taking action `a`.
+5.  **Discount Factor (γ)**: A value between 0 and 1 that determines the importance of future rewards. A discount factor of 0 makes the agent 
+myopic (only caring about immediate rewards), while a value closer to 1 makes it more farsighted.
 
-### Common Pitfalls
+![MDP Components](./images/mdp_components.png)
 
-**Reward Hacking**: The agent finds an unintended way to maximize reward. Classic example: A cleaning robot that makes a mess so it can get reward for cleaning it up.
+*Figure 3: The components of a Markov Decision Process. From a given state, the agent's action leads to a stochastic transition to a new state and a corresponding reward.*
 
-**Sparse Reward Problem**: If the agent only gets reward at the very end, it's like searching for a needle in a haystack. Random exploration might never find the goal.
+### The Markov Property
 
-## What to Build
+A key assumption in MDPs is the **Markov Property**, which states that **the future is independent of the past given the present** [3]. In other words, the current state `s_t` provides all the necessary information to make a decision. We don't need to know the entire history of states and actions that led to the current state.
 
-### 1. Number Guesser
+> **The Markov Property**
+> A state `s_t` is Markov if and only if:
+> P(s_{t+1} | s_t) = P(s_{t+1} | s_1, s_2, ..., s_t)
 
-A simple game where the agent tries to guess a secret number in a limited number of attempts.
+This simplifies the problem immensely, as the agent can make optimal decisions based solely on its current observation.
 
-**Why this environment?**
-- Extremely simple to implement
-- Teaches you the basic environment API
-- Binary rewards are unambiguous
-- Discrete action space
+## Policies and Value Functions: Evaluating "Goodness"
 
-**Implementation checklist**:
-- `reset()` method that initializes a new episode
-- `step(action)` method that returns `(state, reward, done, info)`
-- Proper state representation
-- Clear terminal condition
+How does an agent decide which action to take? This is determined by its **policy (π)**, which is a mapping from states to actions. A policy can be:
 
-### 2. 1D GridWorld
+*   **Deterministic**: For a given state, the policy always returns the same action.
+*   **Stochastic**: For a given state, the policy returns a probability distribution over actions.
 
-A one-dimensional grid where the agent starts at one end and must reach the other.
+But how do we know if a policy is good? We need a way to quantify the expected long-term reward. This is where **value functions** come in. There are two main types:
 
-**Why this environment?**
-- Introduces spatial reasoning
-- Demonstrates sparse rewards
-- Shows the credit assignment problem
-- Still simple enough to debug easily
+1.  **State-Value Function (V(s))**: The expected return when starting in state `s` and following policy `π` thereafter.
+2.  **Action-Value Function (Q(s, a))**: The expected return when starting in state `s`, taking action `a`, and then following policy `π`.
 
-**Implementation checklist**:
-- Grid representation
-- Agent position tracking
-- Movement actions (left, right)
-- Boundary handling
-- Goal detection
+## The Bellman Equation: A Recursive Relationship
 
-### 3. CartPole Wrapper
+The **Bellman Equation** is a cornerstone of RL. It provides a recursive relationship that connects the value of a state to the values of its successor states [4]. It expresses the idea that the value of your current state is the immediate reward plus the discounted value of the state you end up in.
 
-Wrap OpenAI Gym's CartPole environment to understand the standard interface.
+![Bellman Backup Diagram](./images/bellman_backup.png)
 
-**Why this environment?**
-- Industry-standard benchmark
-- Continuous state space (position, velocity, angle, angular velocity)
-- Teaches you to work with existing environments
-- Fast iteration for testing algorithms
+*Figure 4: A Bellman backup diagram. The value of the current state (red) is determined by the expected values of the possible next states (blue), weighted by the probabilities of transitioning to them.*
 
-## Exercises
+For a given policy `π`, the Bellman equation for the state-value function is:
 
-1. **Implement Number Guesser**: Write the environment from scratch. Test it with random actions. Does it behave correctly?
+`V^π(s) = E[R_{t+1} + γV^π(S_{t+1}) | S_t = s]`
 
-2. **Reward Experiments**: Try different reward schemes in your GridWorld:
-   - Binary: +1 at goal, 0 elsewhere
-   - Sparse: +1 at goal, -0.01 per step (encourages speed)
-   - Dense: +1 for moving toward goal, -1 for moving away
-   
-   Which is easiest to learn from? Which leads to the best final policy?
+This equation forms the basis for many RL algorithms. It allows us to iteratively compute the value function for a given policy.
 
-3. **Visualization**: Create a simple visualization of your agent playing. This is crucial for debugging.
+## Finding the Optimal Solution
 
-## Key Takeaways
+The ultimate goal of RL is to find the **optimal policy (π*)**, which is the policy that achieves the highest possible expected return from all states. The optimal policy has an associated optimal state-value function `V*(s)` and optimal action-value function `Q*(s, a)`.
 
-- The environment defines the task. Get this right before worrying about algorithms.
-- Reward design is critical and often harder than the algorithm itself.
-- Binary rewards are a good starting point because they're unambiguous.
-- Always test your environment with random actions first.
-- Visualization is not optional - you need to see what the agent is doing.
+Two classic dynamic programming algorithms for finding the optimal policy in an MDP (when the model is known) are **Value Iteration** and **Policy Iteration** [4].
 
-## Links & Resources
+*   **Value Iteration**: This algorithm starts with an arbitrary value function and iteratively applies the Bellman Optimality Equation to converge to the optimal value function. The policy is then extracted by choosing the action that maximizes the expected value.
+*   **Policy Iteration**: This algorithm alternates between two steps: **policy evaluation** (calculating the value function for the current policy) and **policy improvement** (greedily improving the policy based on the current value function).
 
-- [OpenAI Gym Documentation](https://gymnasium.farama.org/)
-- [Spinning Up: Key Concepts in RL](https://spinningup.openai.com/en/latest/spinningup/rl_intro.html)
-- [Sutton & Barto Chapter 3: Finite MDPs](http://incompleteideas.net/book/the-book-2nd.html)
+![Value Iteration in GridWorld](./images/gridworld_value_iteration.png)
 
-## Next Steps
+*Figure 5: Visualization of Value Iteration in a simple GridWorld. The values of the states are iteratively updated until they converge, at which point the optimal policy (arrows) can be extracted.*
 
-Once you have a working environment and can visualize random agent behavior, you're ready to implement your first learning algorithm: REINFORCE (Topic 2).
+## Putting it into Practice with Code: Gymnasium
+
+Now, let's ground these concepts in code. The standard toolkit for creating and interacting with RL environments is **Gymnasium** (the successor to OpenAI's Gym) [5]. It provides a simple, Pythonic interface for a wide variety of environments.
+
+Here is the basic structure of a Gymnasium interaction loop:
+
+```python
+import gymnasium as gym
+
+# 1. Create the environment
+env = gym.make("LunarLander-v2", render_mode="human")
+
+# 2. Reset the environment to get the initial observation
+observation, info = env.reset()
+
+# 3. Loop through a number of steps
+for _ in range(1000):
+    # 4. Choose an action (here, a random one)
+    action = env.action_space.sample()
+
+    # 5. Take the action and get the next state, reward, and other info
+    observation, reward, terminated, truncated, info = env.step(action)
+
+    # 6. If the episode is over, reset the environment
+    if terminated or truncated:
+        observation, info = env.reset()
+
+# 7. Close the environment
+env.close()
+```
+
+This simple script demonstrates the core agent-environment loop. In the chapters that follow, we will replace the random action selection with sophisticated learning algorithms to create intelligent agents.
+
+## References
+
+[1] Sutton, R. S., & Barto, A. G. (2018). *Reinforcement Learning: An Introduction*. MIT Press. [http://incompleteideas.net/book/the-book-2nd.html](http://incompleteideas.net/book/the-book-2nd.html)
+
+[2] Analytics Vidhya. (2018). *Multi Armed Bandit Problem & Its Implementation in Python*. [https://www.analyticsvidhya.com/blog/2018/09/reinforcement-multi-armed-bandit-scratch-python/](https://www.analyticsvidhya.com/blog/2018/09/reinforcement-multi-armed-bandit-scratch-python/)
+
+[3] GeeksforGeeks. (2025). *Markov Decision Process*. [https://www.geeksforgeeks.org/machine-learning/markov-decision-process/](https://www.geeksforgeeks.org/machine-learning/markov-decision-process/)
+
+[4] Karpathy, A. (n.d.). *REINFORCEjs: Gridworld with Dynamic Programming*. [https://cs.stanford.edu/people/karpathy/reinforcejs/gridworld_dp.html](https://cs.stanford.edu/people/karpathy/reinforcejs/gridworld_dp.html)
+
+[5] Farama Foundation. (2023). *Gymnasium Documentation*. [https://gymnasium.farama.org/](https://gymnasium.farama.org/)
